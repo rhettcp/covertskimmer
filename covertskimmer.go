@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+// CovertClient Client used to interact with the
+// 	Covert Wireless web portal.
 type CovertClient struct {
 	httpClient  *http.Client
 	username    string
@@ -20,17 +22,23 @@ type CovertClient struct {
 	CameraList  []*Camera    `json:"CameraList"`
 }
 
+// Camera struct keeps information regarding the
+// 	cameras found in the web portal.
 type Camera struct {
 	ID             string `json:"ID"`
 	BatteryPercent string `json:"BatteryPercent"`
 	SdCardSpace    string `json:"SdCardSpace"`
 }
 
+// PlanDetails contains stats regarding your plan
 type PlanDetails struct {
 	PlanTotal     string
 	CurrentlyUsed string
 }
 
+// NewCovertClient creates a new client based on the username
+// 	and password provided. CovertClient logs in, finds cameras,
+// 	and loads camera stats.
 func NewCovertClient(username string, password string) (*CovertClient, error) {
 	if username == "" || password == "" {
 		return nil, errors.New("Invalid Auth")
@@ -58,6 +66,8 @@ func NewCovertClient(username string, password string) (*CovertClient, error) {
 	return &c, nil
 }
 
+// GetImageList returns a list of urls to the images for the given camera
+// 	logs in if login was more than 12 hours ago
 func (c *CovertClient) GetImageList(camera Camera) ([]string, error) {
 	if c.lastLogin == nil || c.lastLogin.Before(time.Now().Add(-12*time.Hour)) {
 		err := c.login()
@@ -93,6 +103,26 @@ func (c *CovertClient) GetImageList(camera Camera) ([]string, error) {
 		pageString = pageString[index2:]
 	}
 	return links, nil
+}
+
+// GetCameras returns a list of found cameras
+func (c *CovertClient) GetCameras() []*Camera {
+	return c.CameraList
+}
+
+// GetID returns the ID of the camera
+func (c *Camera) GetID() string {
+	return c.ID
+}
+
+// GetBattery returns battery percentage of the camera
+func (c *Camera) GetBattery() string {
+	return c.BatteryPercent
+}
+
+// GetSDCardSpace returns sd card space available and used
+func (c *Camera) GetSDCardSpace() string {
+	return c.SdCardSpace
 }
 
 func (c *CovertClient) findCameras() error {
@@ -197,22 +227,6 @@ func (c *CovertClient) loadCameraStats() error {
 		c.PlanDetails.CurrentlyUsed = used
 	}
 	return nil
-}
-
-func (c *CovertClient) GetCameras() []*Camera {
-	return c.CameraList
-}
-
-func (c *Camera) GetID() string {
-	return c.ID
-}
-
-func (c *Camera) GetBattery() string {
-	return c.BatteryPercent
-}
-
-func (c *Camera) GetSDCardSpace() string {
-	return c.SdCardSpace
 }
 
 func trimTo(data, identifier string) string {
