@@ -75,6 +75,7 @@ func (c *CovertClient) GetImageList(camera Camera) ([]string, error) {
 			return nil, err
 		}
 	}
+
 	cameraURL := fmt.Sprintf("https://covert-wireless.com/photos?camera=%s", camera.GetID())
 
 	req, err := http.NewRequest(http.MethodGet, cameraURL, nil)
@@ -90,7 +91,7 @@ func (c *CovertClient) GetImageList(camera Camera) ([]string, error) {
 	pageString := string(pageData)
 	links := make([]string, 0)
 	for {
-		index := strings.Index(pageString, "https://covert-camera-images.s3.amazonaws.com/")
+		index := strings.Index(pageString, fmt.Sprintf("/photos/show?camera=%s&photo=", camera.GetID()))
 		if index == -1 {
 			break
 		}
@@ -99,7 +100,11 @@ func (c *CovertClient) GetImageList(camera Camera) ([]string, error) {
 		if index2 == -1 {
 			break
 		}
-		links = append(links, strings.Replace(pageString[:index2], "/320/", "/1024/", 1))
+		imageLink := c.abstractImageURL(pageString[:index2])
+		if imageLink == "" {
+			continue
+		}
+		links = append(links, imageLink)
 		pageString = pageString[index2:]
 	}
 	return links, nil
@@ -123,6 +128,32 @@ func (c *Camera) GetBattery() string {
 // GetSDCardSpace returns sd card space available and used
 func (c *Camera) GetSDCardSpace() string {
 	return c.SdCardSpace
+}
+
+func (c *CovertClient) abstractImageURL(link string) string {
+	url := fmt.Sprintf("https://covert-wireless.com/%s", link)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return ""
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return ""
+	}
+	pageData, _ := ioutil.ReadAll(resp.Body)
+	pageString := string(pageData)
+
+	index := strings.Index(pageString, "https://images.covert-wireless.com")
+	if index == -1 {
+		return ""
+	}
+	pageString = pageString[index:]
+	index2 := strings.Index(pageString, "\"")
+	if index2 == -1 {
+		return ""
+	}
+	return pageString[:index2]
 }
 
 func (c *CovertClient) findCameras() error {
