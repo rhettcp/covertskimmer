@@ -91,9 +91,13 @@ func (c *CovertClient) GetImageList(camera Camera) ([]string, error) {
 	pageString := string(pageData)
 	links := make([]string, 0)
 	for {
-		index := strings.Index(pageString, "https://images.covert-wireless.com/2019/10/320/")
+		//Covert keeps swapping image storage
+		index := strings.Index(pageString, fmt.Sprintf("https://images.covert-wireless.com/%d/%d/320/", time.Now().Year(), time.Now().Month()))
 		if index == -1 {
-			break
+			index = strings.Index(pageString, fmt.Sprintf("https://covert-camera-images.s3.amazonaws.com/%d/%d/320/", time.Now().Year(), time.Now().Month()))
+			if index == -1 {
+				break
+			}
 		}
 		pageString = pageString[index:]
 		index2 := strings.Index(pageString, "\"")
